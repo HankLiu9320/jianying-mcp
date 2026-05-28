@@ -35,7 +35,7 @@ def video_tools(mcp: FastMCP):
 
         Args:
             track_id: 轨道ID，通过create_track获得
-            material: 视频文件路径，包括文本文件路径或者url
+            material: 视频或图片文件路径（含 mp4、png、jpg 等）或 url
             target_start_end: 片段在轨道上的目标时间范围，格式如 "1s-4.2s"，表示在轨道上从1s开始，到4.2s结束，target_start_end参数描述的是轨道上的时间范围，同一轨道中不可有重复时间段，即0s-4.2s和4s-5s，第一段素材最后0.2s与第二段素材重叠了，只能是0s-4.2s和4.ss-5s
             source_start_end: 从源视频文件中截取的时间范围，格式如 "1s-4.2s"，表示从源视频的1s开始截取，到4.2s结束（可选），source_start_end参数描述的是素材本身取的时长，默认取全部时长，一般情况下不设置，除非用户说明，若素材时长为5s,用户需要取其中1s-5s的内容，才配置
             speed: (`float`, optional): 播放速度, 默认为1.0，此项与`source_timerange`同时指定时, 将覆盖`target_timerange`中的时长
@@ -60,6 +60,9 @@ def video_tools(mcp: FastMCP):
         Examples:
             # 基本用法
             add_video_segment("track_id", "/path/to/video.mp4", "0s-5s")
+
+            # 图片素材（png/jpg 等，无需转 mp4）
+            add_video_segment("track_id", "/path/to/image.png", "0s-5s")
 
             # 指定源时间范围
             add_video_segment("track_id", "/path/to/video.mp4", "0s-3s", source_timerange="10s-3s")

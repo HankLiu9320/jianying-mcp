@@ -25,6 +25,8 @@ class MaterialValidator:
     SUPPORTED_AUDIO_FORMATS = {'.mp3', '.wav', '.aac', '.m4a', '.flac', '.ogg', '.wma'}
     SUPPORTED_VIDEO_FORMATS = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg'}
     SUPPORTED_IMAGE_FORMATS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    # 视频轨道片段：视频 + 图片（如 png）
+    SUPPORTED_VISUAL_FORMATS = SUPPORTED_VIDEO_FORMATS | SUPPORTED_IMAGE_FORMATS
 
     def __init__(self, draft_id: str = None):
         self.draft_id = draft_id
@@ -35,7 +37,7 @@ class MaterialValidator:
         
         Args:
             material_path: 素材路径或URL
-            expected_type: 期望的素材类型 ("audio", "video", "image")
+            expected_type: 期望的素材类型 ("audio", "video", "image", "visual")
             
         Raises:
             FileNotFoundError: 本地文件不存在
@@ -294,6 +296,8 @@ class MaterialValidator:
             raise ValueError(f"不支持的视频格式 {ext}: {source}")
         elif expected_type == "image" and ext not in self.SUPPORTED_IMAGE_FORMATS:
             raise ValueError(f"不支持的图片格式 {ext}: {source}")
+        elif expected_type == "visual" and ext not in self.SUPPORTED_VISUAL_FORMATS:
+            raise ValueError(f"不支持的视频/图片格式 {ext}: {source}")
     
 
     
@@ -324,7 +328,7 @@ def validate_material(material_path: str, material_type: str = None,
 
     Args:
         material_path: 素材路径或URL
-        material_type: 素材类型 ("audio", "video", "image")
+        material_type: 素材类型 ("audio", "video", "image", "visual")
         source_timerange: 源时间范围（可选）
     """
     validator = MaterialValidator()
@@ -345,7 +349,7 @@ def download_and_validate_material(draft_id: str, material_path: str, material_t
     Args:
         draft_id: 草稿ID
         material_path: 素材路径或URL
-        material_type: 素材类型 ("audio", "video", "image")
+        material_type: 素材类型 ("audio", "video", "image", "visual")
         target_timerange: 源时间范围
 
     Returns:
@@ -356,14 +360,18 @@ def download_and_validate_material(draft_id: str, material_path: str, material_t
     # 下载并本地化素材
     local_path = validator.download_and_localize_material(material_path, material_type)
 
-    # 验证时长（如果提供了源时间范围）
-    if target_timerange and material_type in ["audio", "video"]:
-        # 对于相对路径，需要转换为绝对路径进行验证
+    # 验证时长（如果提供了源时间范围；图片素材跳过）
+    if target_timerange and material_type in ("audio", "video", "visual"):
         if not os.path.isabs(local_path):
             abs_path = os.path.join(SAVE_PATH, draft_id, local_path)
         else:
             abs_path = local_path
-        validator.validate_source_timerange(abs_path, target_timerange)
+        ext = os.path.splitext(abs_path)[1].lower()
+        should_check_duration = material_type in ("audio", "video") or (
+            material_type == "visual" and ext in MaterialValidator.SUPPORTED_VIDEO_FORMATS
+        )
+        if should_check_duration:
+            validator.validate_source_timerange(abs_path, target_timerange)
 
     return local_path
 

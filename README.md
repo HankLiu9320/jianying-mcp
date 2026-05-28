@@ -27,7 +27,7 @@ jianying mcp是一个强大的视频制作自动化工具，通过mcp协议让AI
 - `create_track` - 创建视频/音频/文本轨道
 
 ### 🎥 视频处理
-- `add_video_segment` - 添加视频片段(可以是本地文件，也可以是url)
+- `add_video_segment` - 添加视频/图片片段(支持 mp4、png、jpg 等，本地文件或 url)
 - `add_video_animation` - 添加入场/出场动画
 - `add_video_transition` - 添加转场效果
 - `add_video_filter` - 应用滤镜效果

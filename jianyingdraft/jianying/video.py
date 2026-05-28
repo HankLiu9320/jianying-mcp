@@ -100,7 +100,7 @@ class VideoSegment:
         local_material_path = download_and_validate_material(
             self.draft_id,
             material,
-            "video",
+            "visual",
             target_timerange_data
         )
 
