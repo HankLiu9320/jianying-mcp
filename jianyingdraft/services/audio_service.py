@@ -3,9 +3,172 @@
 Author: jian wei
 File Name: audio_service.py
 """
+import json
+from datetime import datetime
+from pathlib import Path
+from threading import Event, Thread
 from typing import Optional, Dict, Any, List
+from websocket import WebSocketApp
 from jianyingdraft.jianying.audio import AudioSegment
 from jianyingdraft.utils.response import ToolResponse
+
+WS_URL = "wss://sami.bytedance.com/internal/api/v2/ws?device_id=420445199538212&iid=420445199542308"
+APP_KEY = "IZjhUeAYwP"
+NAMESPACE = "TTS"
+DEFAULT_SPEAKER = "BV411_streaming"
+DEFAULT_FORMAT = "mp3"
+BIT_RATE = 64000
+SAMPLE_RATE = 24000
+TASK_SUCCESS_CODE = 20000000
+
+
+def _sanitize_output_name(output_name: Optional[str]) -> str:
+    if output_name:
+        safe_name = "".join(ch for ch in output_name if ch.isalnum() or ch in ("-", "_", ".")).strip(".")
+        if not safe_name:
+            raise ValueError("output_name 非法，请仅使用字母数字/._-")
+        if not safe_name.lower().endswith(f".{DEFAULT_FORMAT}"):
+            safe_name = f"{safe_name}.{DEFAULT_FORMAT}"
+        return safe_name
+
+    ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    return f"tts_{ts}.{DEFAULT_FORMAT}"
+
+
+def _build_start_task_message(text: str, speaker: Optional[str]) -> str:
+    payload = {
+        "audio_config": {
+            "bit_rate": BIT_RATE,
+            "format": DEFAULT_FORMAT,
+            "sample_rate": SAMPLE_RATE
+        },
+        "speaker": speaker.strip() if speaker and speaker.strip() else DEFAULT_SPEAKER,
+        "text": text
+    }
+    start_task = {
+        "appkey": APP_KEY,
+        "event": "StartTask",
+        "namespace": NAMESPACE,
+        "payload": json.dumps(payload, ensure_ascii=False)
+    }
+    return json.dumps(start_task, ensure_ascii=False)
+
+
+def text_to_speech_service(
+    text: str,
+    speaker: Optional[str] = None,
+    output_name: Optional[str] = None
+) -> ToolResponse:
+    """
+    文本转语音服务（字节 WebSocket TTS）
+
+    Args:
+        text: 要合成的文本
+        speaker: 发音人（可选），默认 BV411_streaming
+        output_name: 输出文件名（可选）
+
+    Returns:
+        ToolResponse: 返回生成音频路径
+    """
+    try:
+        if not text or not text.strip():
+            return ToolResponse(success=False, message="文本不能为空")
+
+        root_dir = Path(__file__).resolve().parents[2]
+        material_dir = root_dir / "material"
+        material_dir.mkdir(parents=True, exist_ok=True)
+        output_path = material_dir / _sanitize_output_name(output_name)
+
+        audio_chunks: List[bytes] = []
+        done_event = Event()
+        state: Dict[str, Any] = {
+            "status_code": None,
+            "status_text": "",
+            "error": None,
+            "finished": False
+        }
+
+        def on_open(ws):
+            try:
+                ws.send(_build_start_task_message(text=text.strip(), speaker=speaker))
+            except Exception as e:
+                state["error"] = str(e)
+                done_event.set()
+                ws.close()
+
+        def on_message(ws, message):
+            try:
+                if isinstance(message, (bytes, bytearray)):
+                    audio_chunks.append(bytes(message))
+                    return
+
+                node = json.loads(message)
+                event = node.get("event")
+                if event == "TaskFinished":
+                    state["status_code"] = int(node.get("status_code", 0))
+                    state["status_text"] = node.get("status_text", "")
+                    state["finished"] = True
+                    done_event.set()
+                    ws.close()
+            except Exception as e:
+                state["error"] = str(e)
+                done_event.set()
+                ws.close()
+
+        def on_error(ws, error):
+            state["error"] = str(error)
+            done_event.set()
+
+        ws_app = WebSocketApp(
+            WS_URL,
+            on_open=on_open,
+            on_message=on_message,
+            on_error=on_error
+        )
+
+        ws_thread = Thread(
+            target=lambda: ws_app.run_forever(ping_interval=20, ping_timeout=10),
+            daemon=True
+        )
+        ws_thread.start()
+
+        if not done_event.wait(timeout=30):
+            ws_app.close()
+            return ToolResponse(success=False, message="文本转语音失败: TTS 调用超时")
+
+        ws_thread.join(timeout=2)
+
+        if state["error"]:
+            return ToolResponse(success=False, message=f"文本转语音失败: {state['error']}")
+
+        if not state["finished"]:
+            return ToolResponse(success=False, message="文本转语音失败: 任务未正常完成")
+
+        if state["status_code"] != TASK_SUCCESS_CODE:
+            return ToolResponse(
+                success=False,
+                message=f"文本转语音失败: code={state['status_code']}, msg={state['status_text']}"
+            )
+
+        if not audio_chunks:
+            return ToolResponse(success=False, message="文本转语音失败: 未收到音频数据")
+
+        output_path.write_bytes(b"".join(audio_chunks))
+
+        return ToolResponse(
+            success=True,
+            message="文本转语音成功",
+            data={
+                "audio_path": str(output_path),
+                "format": DEFAULT_FORMAT,
+                "speaker": speaker.strip() if speaker and speaker.strip() else DEFAULT_SPEAKER,
+                "ws_url": WS_URL
+            }
+        )
+    except ValueError as e:
+        return ToolResponse(success=False, message=f"文本转语音失败: {str(e)}")
+    except Exception as e:
+        return ToolResponse(success=False, message=f"文本转语音失败: {str(e)}")
 
 
 def add_audio_segment_service(

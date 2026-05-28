@@ -6,7 +6,7 @@ File Name: audio_tool.py
 from typing import Optional, List
 from mcp.server.fastmcp import FastMCP
 from jianyingdraft.services.audio_service import add_audio_segment_service, add_audio_effect_service, \
-    add_audio_fade_service, add_audio_keyframe_service
+    add_audio_fade_service, add_audio_keyframe_service, text_to_speech_service
 from jianyingdraft.utils.response import ToolResponse
 from jianyingdraft.utils.index_manager import index_manager
 from jianyingdraft.utils.time_format import parse_start_end_format
@@ -363,5 +363,33 @@ def audio_tools(mcp: FastMCP):
         )
 
         return result
+
+    @mcp.tool()
+    def text_to_speech(
+            text: str,
+            speaker: Optional[str] = None,
+            voice: Optional[str] = None,
+            output_name: Optional[str] = None
+    ) -> ToolResponse:
+        """
+        文本转语音，基于 WebSocket 调用字节 TTS，输出 mp3 到 material 目录
+
+        Args:
+            text: 需要转语音的文本内容
+            speaker: 发音人（可选），默认 BV411_streaming
+            voice: speaker 的兼容别名（可选）
+            output_name: 输出文件名（可选），默认自动生成，后缀为 .mp3
+        """
+        if not text or not text.strip():
+            return ToolResponse(
+                success=False,
+                message="text 不能为空"
+            )
+
+        return text_to_speech_service(
+            text=text,
+            speaker=speaker or voice,
+            output_name=output_name
+        )
 
 
