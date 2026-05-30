@@ -31,11 +31,18 @@ def draft_tools(mcp: FastMCP):
 2. 严格遵循操作流程
 必须按照以下顺序执行，不可跳步骤：
 创建草稿 → create_draft
-创建轨道 → create_track（根据需要创建video、audio、text轨道）
-添加素材 → add_*_segment（添加视频、音频、文本片段）
+创建轨道 → create_track 或 batch_create_tracks（分镜等多轨道场景优先用批量）
+添加素材 → add_*_segment 或 batch_add_segments（多片段场景优先用批量，一次调用可添加数十条）
 查询特效 → find_effects_by_type（查找可用特效）
 应用特效 → add_*_effect/animation（添加各种特效和动画）
 导出草稿 → export_draft
+
+2.1 批量工具（分镜/多镜头必用，避免逐条 MCP 调用过慢）
+- batch_create_tracks: 一次创建多条轨道，返回 track_map（track_name → track_id）
+- batch_add_segments: 一次添加多条 video/audio/text 片段；用 track_name 指定轨道，target_start_end 格式与单条工具相同
+- batch_parse_media_durations: 一次解析多个音频/视频时长，规划时间轴前优先调用
+- 典型分镜流程: create_draft → batch_create_tracks → batch_parse_media_durations → batch_add_segments → export_draft
+- 禁止为批量添加素材而编写本地 Python 脚本绕过 MCP；应使用 batch_* 工具
 
 3. ID管理规则
 draft_id：创建草稿后获得，用于所有后续操作
@@ -50,6 +57,15 @@ segment_id：添加素材后获得，用于添加特效和动画
 add_video_segment 已支持直接导入图片，无需将 png 转成 mp4。
 在 video 轨道上调用 add_video_segment，material 传入图片本地绝对路径或 url，target_start_end 指定轨道上展示时长（如 "0s-5s" 表示展示 5 秒）。
 禁止仅因格式为 png 而自行 ffmpeg 转码；仅当 add_video_segment 明确报错时才考虑其他方案。
+
+4.2 图片布局 clip_settings（分镜必用，避免多图堆在画面中央）
+- 每张 PNG（除全屏背景外）添加 video 片段时必须传入 clip_settings，至少包含 scale_x、scale_y；多元素同屏时还必须设置 transform_x、transform_y。
+- transform_x / transform_y 单位为「半个画布宽/高」：0 为居中；约 ±0.5 为左右/上下靠边；正值向右/向上，负值向左/向下。
+- 分镜 02-分镜脚本.md 中「位置」与「出场顺序」表里的 scale、transform 须原样写入 clip_settings，不得只写自然语言位置而不传数值。
+- 全屏背景（1920x1080）通常 scale 1.0、transform 0；角色/道具建议 scale 0.35–0.65，按分镜表填写。
+- 同一时间段多张图：每张图 transform_x 必须不同（如横排四人可用 -0.65 / -0.20 / 0.20 / 0.65），禁止全部使用默认 0,0。
+- 位置速查（无分镜数值时可参考）：屏幕左侧 transform_x≈-0.5；右侧≈0.5；上方 transform_y≈0.35；下方≈-0.4；中央偏下 transform_y≈-0.35。
+- batch_add_segments 示例：{"type":"video","track_name":"video_layer1","material":"/path/role.png","target_start_end":"0s-5s","clip_settings":{"scale_x":0.45,"scale_y":0.45,"transform_x":-0.55,"transform_y":-0.45}}
 
 5.时长规则
 在规划视频、音频时长时，必须从素材本身时长出发，使用本身的时长，切记不能超出素材本身时长（图片素材无固定时长，由 target_start_end 决定展示多久，不受此条「素材本身时长」限制）

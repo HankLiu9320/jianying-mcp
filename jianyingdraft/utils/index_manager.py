@@ -249,6 +249,23 @@ class IndexManager:
         index_data = self._load_index()
         return index_data["track_mappings"].get(track_id)
 
+    def get_track_id_by_draft_and_name(self, draft_id: str, track_name: str) -> Optional[str]:
+        """通过草稿 ID 与轨道名查找轨道 ID。"""
+        index_data = self._load_index()
+        for track_id, info in index_data["track_mappings"].items():
+            if info.get("draft_id") == draft_id and info.get("track_name") == track_name:
+                return track_id
+        return None
+
+    def list_track_ids_by_draft_id(self, draft_id: str) -> Dict[str, str]:
+        """返回草稿下 {track_name: track_id} 映射。"""
+        index_data = self._load_index()
+        result = {}
+        for track_id, info in index_data["track_mappings"].items():
+            if info.get("draft_id") == draft_id and info.get("track_name"):
+                result[info["track_name"]] = track_id
+        return result
+
     def get_draft_id_by_text_segment_id(self, text_segment_id: str) -> Optional[str]:
         """
         通过文本片段ID获取草稿ID

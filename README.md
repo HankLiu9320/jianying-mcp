@@ -25,6 +25,7 @@ jianying mcp是一个强大的视频制作自动化工具，通过mcp协议让AI
 
 ### 🛤️ 轨道管理
 - `create_track` - 创建视频/音频/文本轨道
+- `batch_create_tracks` - **批量**创建多条轨道（分镜场景推荐）
 
 ### 🎥 视频处理
 - `add_video_segment` - 添加视频/图片片段(支持 mp4、png、jpg 等，本地文件或 url)
@@ -51,6 +52,13 @@ jianying mcp是一个强大的视频制作自动化工具，通过mcp协议让AI
 ### 🔧 实用工具
 - `parse_media_info` - 解析媒体文件信息
 - `find_effects_by_type` - 查找可用特效资源
+
+### ⚡ 批量工具（分镜/多镜头推荐）
+- `batch_create_tracks` - 一次创建多条轨道，返回 `track_map`
+- `batch_add_segments` - 一次添加多条 video/audio/text 片段
+- `batch_parse_media_durations` - 一次解析多个媒体时长
+
+典型分镜流程：`create_draft` → `batch_create_tracks` → `batch_parse_media_durations` → `batch_add_segments` → `export_draft`
 
 ## 📦 快速开始
 

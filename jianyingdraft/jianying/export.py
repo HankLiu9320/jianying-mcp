@@ -61,6 +61,20 @@ class ExportDraft:
         self.export_logs.append(log_entry)
         print(message)  # 保持原有的打印行为
 
+    @staticmethod
+    def _build_clip_settings(clip_data: Dict[str, Any]) -> ClipSettings:
+        """从 JSON 中的 clip_settings 字典构建 ClipSettings。"""
+        return ClipSettings(
+            alpha=clip_data.get("alpha", 1.0),
+            flip_horizontal=clip_data.get("flip_horizontal", False),
+            flip_vertical=clip_data.get("flip_vertical", False),
+            rotation=clip_data.get("rotation", 0.0),
+            scale_x=clip_data.get("scale_x", 1.0),
+            scale_y=clip_data.get("scale_y", 1.0),
+            transform_x=clip_data.get("transform_x", 0.0),
+            transform_y=clip_data.get("transform_y", 0.0),
+        )
+
     def export(self, draft_id: str) -> dict:
         """
         导出草稿
@@ -803,20 +817,9 @@ class ExportDraft:
                     vertical_offset=bg_data.get("vertical_offset", 0.5)
                 )
 
-            # 处理clip_settings
             clip_settings = None
             if "clip_settings" in params:
-                clip_data = params["clip_settings"]
-                clip_settings = ClipSettings(
-                    alpha=clip_data.get("alpha", 1.0),
-                    flip_horizontal=clip_data.get("flip_horizontal", False),
-                    flip_vertical=clip_data.get("flip_vertical", False),
-                    rotation=clip_data.get("rotation", 0.0),
-                    scale_x=clip_data.get("scale_x", 1.0),
-                    scale_y=clip_data.get("scale_y", 1.0),
-                    transform_x=clip_data.get("transform_x", 0.0),
-                    transform_y=clip_data.get("transform_y", 0.0)
-                )
+                clip_settings = self._build_clip_settings(params["clip_settings"])
 
             # 创建TextSegment
             text_segment = TextSegment(
@@ -869,14 +872,18 @@ class ExportDraft:
                     source_duration = source_data.get("duration", "1s")
                     source_timerange = trange(source_start, source_duration)
 
-            # 创建VideoSegment
+            clip_settings = None
+            if "clip_settings" in params:
+                clip_settings = self._build_clip_settings(params["clip_settings"])
+
             video_segment = VideoSegment(
                 material=material,
                 target_timerange=target_timerange,
                 source_timerange=source_timerange,
                 speed=params.get("speed"),
                 volume=params.get("volume", 1.0),
-                change_pitch=params.get("change_pitch", False)
+                change_pitch=params.get("change_pitch", False),
+                clip_settings=clip_settings,
             )
 
             self._log(f"创建VideoSegment成功: {material_path}")
