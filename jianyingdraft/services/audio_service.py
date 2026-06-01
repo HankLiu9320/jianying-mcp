@@ -56,6 +56,7 @@ def _build_start_task_message(text: str, speaker: Optional[str]) -> str:
 
 def text_to_speech_service(
     text: str,
+    output_dir: str,
     speaker: Optional[str] = None,
     output_name: Optional[str] = None
 ) -> ToolResponse:
@@ -64,6 +65,7 @@ def text_to_speech_service(
 
     Args:
         text: 要合成的文本
+        output_dir: 输出目录（由调用方指定，支持 ~ 与相对路径）
         speaker: 发音人（可选），默认 BV411_streaming
         output_name: 输出文件名（可选）
 
@@ -74,10 +76,12 @@ def text_to_speech_service(
         if not text or not text.strip():
             return ToolResponse(success=False, message="文本不能为空")
 
-        root_dir = Path(__file__).resolve().parents[2]
-        material_dir = root_dir / "material"
-        material_dir.mkdir(parents=True, exist_ok=True)
-        output_path = material_dir / _sanitize_output_name(output_name)
+        if not output_dir or not output_dir.strip():
+            return ToolResponse(success=False, message="output_dir 不能为空")
+
+        output_dir_path = Path(output_dir.strip()).expanduser().resolve()
+        output_dir_path.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir_path / _sanitize_output_name(output_name)
 
         audio_chunks: List[bytes] = []
         done_event = Event()
@@ -160,6 +164,7 @@ def text_to_speech_service(
             message="文本转语音成功",
             data={
                 "audio_path": str(output_path),
+                "output_dir": str(output_dir_path),
                 "format": DEFAULT_FORMAT,
                 "speaker": speaker.strip() if speaker and speaker.strip() else DEFAULT_SPEAKER,
                 "ws_url": WS_URL

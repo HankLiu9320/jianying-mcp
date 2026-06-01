@@ -367,15 +367,17 @@ def audio_tools(mcp: FastMCP):
     @mcp.tool()
     def text_to_speech(
             text: str,
+            output_dir: str,
             speaker: Optional[str] = None,
             voice: Optional[str] = None,
             output_name: Optional[str] = None
     ) -> ToolResponse:
         """
-        文本转语音，基于 WebSocket 调用字节 TTS，输出 mp3 到 material 目录
+        文本转语音，基于 WebSocket 调用字节 TTS，输出 mp3 到指定目录
 
         Args:
             text: 需要转语音的文本内容
+            output_dir: 输出目录（必填），如 /path/to/audio 或 ~/Downloads/tts
             speaker: 发音人（可选），默认 BV411_streaming
             voice: speaker 的兼容别名（可选）
             output_name: 输出文件名（可选），默认自动生成，后缀为 .mp3
@@ -386,8 +388,15 @@ def audio_tools(mcp: FastMCP):
                 message="text 不能为空"
             )
 
+        if not output_dir or not output_dir.strip():
+            return ToolResponse(
+                success=False,
+                message="output_dir 不能为空"
+            )
+
         return text_to_speech_service(
             text=text,
+            output_dir=output_dir,
             speaker=speaker or voice,
             output_name=output_name
         )

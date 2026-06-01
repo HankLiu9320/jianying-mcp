@@ -167,24 +167,22 @@ add_text_segment工具其中的参数clip_settings的transform_y，强烈建议�
             export_result = exporter.export(draft_id)
 
             if export_result and isinstance(export_result, dict):
+                export_logs = export_result.get("export_logs", [])
+                summary = export_result.get("summary", {})
+                issues = [
+                    log["message"]
+                    for log in export_logs
+                    if log.get("level") in ("warning", "error")
+                ][-10:]
                 return ToolResponse(
                     success=True,
                     message="草稿导出成功",
                     data={
                         "draft_id": draft_id,
-                        "output_path": export_result.get("output") + f"/{export_result.get("draft_name")}",
+                        "output_path": export_result.get("output") + f"/{export_result.get('draft_name')}",
                         "draft_name": export_result.get("draft_name"),
-                        "export_logs": export_result.get("export_logs", []),
-                        "summary": export_result.get("summary", {}),
-                        "processing_details": {
-                            "total_operations": len(export_result.get("export_logs", [])),
-                            "successful_operations": len(
-                                [log for log in export_result.get("export_logs", []) if log.get("level") == "info"]),
-                            "warnings": len(
-                                [log for log in export_result.get("export_logs", []) if log.get("level") == "warning"]),
-                            "errors": len(
-                                [log for log in export_result.get("export_logs", []) if log.get("level") == "error"])
-                        }
+                        "summary": summary,
+                        "issues": issues,
                     }
                 )
             else:

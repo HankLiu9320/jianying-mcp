@@ -53,13 +53,13 @@ class ExportDraft:
             message: 日志消息
             level: 日志级别 (info, warning, error)
         """
-        import datetime
         log_entry = {
             "level": level,
             "message": message
         }
         self.export_logs.append(log_entry)
-        print(message)  # 保持原有的打印行为
+        # MCP 使用 stdio JSON-RPC，stdout 只能用于协议通信；日志写入 stderr
+        print(message, file=sys.stderr, flush=True)
 
     @staticmethod
     def _build_clip_settings(clip_data: Dict[str, Any]) -> ClipSettings:
