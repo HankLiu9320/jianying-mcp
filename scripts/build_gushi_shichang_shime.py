@@ -40,7 +40,7 @@ AUDIO_ITEMS = [
 ]
 
 SUB_STYLE = {"size": 8.0, "bold": True, "color": (0.1, 0.1, 0.2), "align": 1}
-SUB_CLIP = {"transform_y": -0.7}
+SUB_CLIP = {"transform_y": -0.85}
 
 
 def aid(name: str) -> str:
