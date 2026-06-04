@@ -7,6 +7,7 @@ import os
 import json
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
+from jianyingdraft.utils.time_format import parse_time_to_ms
 
 # 加载环境变量
 load_dotenv()
@@ -40,12 +41,7 @@ class TimeRange:
         Returns:
             int: 微秒数
         """
-        if not time_str or not time_str.endswith('s'):
-            raise ValueError(f"无效的时间格式: {time_str}")
-
-        # 移除's'后缀并转换为浮点数
-        seconds = float(time_str[:-1])
-        return int(seconds * 1_000_000)  # 转换为微秒
+        return parse_time_to_ms(time_str) * 1000  # 毫秒 -> 微秒，与 pyJianYingDraft tim() 取整一致
 
     def overlaps_with(self, other: 'TimeRange') -> bool:
         """

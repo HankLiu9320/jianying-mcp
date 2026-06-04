@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from jianyingdraft.services.batch_service import batch_add_segments_service, batch_create_tracks_service
 from jianyingdraft.utils.media_parser import get_media_duration
 from jianyingdraft.utils.response import ToolResponse
+from jianyingdraft.utils.time_format import safe_media_duration_seconds
 
 
 def batch_tools(mcp: FastMCP):
@@ -44,7 +45,7 @@ def batch_tools(mcp: FastMCP):
             segments: 片段列表。每项必填:
                 - type: "video" | "audio" | "text"
                 - track_name 或 track_id
-                - target_start_end: "开始s-结束s"（绝对结束时间）
+                - target_start_end: "开始s-结束s"（绝对结束时间；内部按毫秒计算，避免浮点误差）
               video/audio 还需 material；text 还需 text。
               可选字段与单条 add_*_segment 相同（clip_settings、style 等）。
               video/text 可选内联动效（分镜动效类型/动效名称列）:
@@ -79,15 +80,16 @@ def batch_tools(mcp: FastMCP):
             media_paths: 媒体文件绝对路径列表
 
         Returns:
-            每项含 path、duration（秒，解析失败为 null）
+            每项含 path、duration（秒，毫秒精度、最多 3 位小数，解析失败为 null）
         """
         if not media_paths:
             return ToolResponse(success=False, message="media_paths 不能为空")
 
         items = []
         for path in media_paths:
-            duration = get_media_duration(path)
-            items.append({"path": path, "duration": duration})
+            # 毫秒取整后的安全可用时长（已含 0.2s 余量），避免 Agent 浮点累加越界
+            duration = safe_media_duration_seconds(get_media_duration(path))
+            items.append({"path": path, "duration": duration, "duration_unit": "seconds"})
 
         return ToolResponse(
             success=True,

@@ -8,7 +8,14 @@ from jianyingdraft.services.track_service import create_track_service
 from jianyingdraft.services.video_service import add_video_segment_service, add_video_animation_service
 from jianyingdraft.utils.index_manager import index_manager
 from jianyingdraft.utils.response import ToolResponse
-from jianyingdraft.utils.time_format import parse_start_end_format
+from jianyingdraft.utils.media_parser import get_media_duration
+from jianyingdraft.utils.time_format import (
+    format_ms_as_seconds_str,
+    normalize_start_duration_timerange,
+    parse_start_end_format,
+    parse_time_to_ms,
+    safe_media_duration_seconds,
+)
 
 
 def _resolve_track_name(
@@ -43,6 +50,34 @@ def _resolve_track_name(
     if track_cache is not None:
         track_cache[cache_key] = result
     return result
+
+
+def _clamp_timerange_to_media(material: str, timerange_str: str) -> tuple[str, bool]:
+    """
+    将「开始-持续」时间范围限制在素材可用时长内（毫秒精度）。
+
+    Returns:
+        (规范化后的 timerange_str, 是否发生截断)
+    """
+    if "-" not in timerange_str:
+        return timerange_str, False
+
+    start_str, duration_str = timerange_str.split("-", 1)
+    start_ms = parse_time_to_ms(start_str.strip())
+    duration_ms = parse_time_to_ms(duration_str.strip())
+
+    safe_seconds = safe_media_duration_seconds(get_media_duration(material))
+    if safe_seconds is None:
+        return timerange_str, False
+
+    max_duration_ms = int(round(safe_seconds * 1000))
+    if duration_ms <= max_duration_ms:
+        return timerange_str, False
+
+    return (
+        f"{format_ms_as_seconds_str(start_ms)}-{format_ms_as_seconds_str(max_duration_ms)}",
+        True,
+    )
 
 
 def _get_animation_fields(item: Dict[str, Any]) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -200,6 +235,7 @@ def _add_single_segment(
 
     try:
         target_timerange = parse_start_end_format(target_start_end)
+        target_timerange = normalize_start_duration_timerange(target_timerange)
     except ValueError as exc:
         return {"index": index, "type": segment_type, "success": False, "message": f"target_start_end 格式错误: {exc}"}
 
@@ -208,8 +244,22 @@ def _add_single_segment(
     if source_start_end:
         try:
             source_timerange = parse_start_end_format(source_start_end)
+            source_timerange = normalize_start_duration_timerange(source_timerange)
         except ValueError as exc:
             return {"index": index, "type": segment_type, "success": False, "message": f"source_start_end 格式错误: {exc}"}
+
+    if segment_type in ("audio", "video"):
+        material = item.get("material")
+        if material:
+            target_timerange, clamped = _clamp_timerange_to_media(material, target_timerange)
+            if clamped:
+                result_note = "target_timerange 已按素材可用时长自动截断（毫秒精度）"
+            else:
+                result_note = None
+        else:
+            result_note = None
+    else:
+        result_note = None
 
     if segment_type == "video":
         response = add_video_segment_service(
@@ -234,6 +284,9 @@ def _add_single_segment(
                 "track_name": track_name,
                 "video_segment_id": video_segment_id,
             }
+            if result_note:
+                result["time_adjustment"] = result_note
+                result["target_timerange"] = target_timerange
             if video_segment_id:
                 anim_ok, anim_err, anim_info = _apply_segment_animation(
                     draft_id, item, "video", video_segment_id, track_name
@@ -264,13 +317,17 @@ def _add_single_segment(
             audio_segment_id = response.data.get("audio_segment_id")
             if audio_segment_id and track_id:
                 index_manager.add_audio_segment_mapping(audio_segment_id, track_id)
-            return {
+            result = {
                 "index": index,
                 "type": "audio",
                 "success": True,
                 "track_name": track_name,
                 "audio_segment_id": audio_segment_id,
             }
+            if result_note:
+                result["time_adjustment"] = result_note
+                result["target_timerange"] = target_timerange
+            return result
         return {"index": index, "type": "audio", "success": False, "message": response.message}
 
     if segment_type == "text":

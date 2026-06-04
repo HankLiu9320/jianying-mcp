@@ -53,9 +53,9 @@ segment_id：添加素材后获得，用于添加特效和动画
 4.轨道规则
 一般情况下同类型的轨道只需要一个就可以，除非需要画中画等复杂情况才会创建多个同类型的轨道
 
-4.1 图片素材（png/jpg/webp 等）
-add_video_segment 已支持直接导入图片，无需将 png 转成 mp4。
-在 video 轨道上调用 add_video_segment，material 传入图片本地绝对路径或 url，target_start_end 指定轨道上展示时长（如 "0s-5s" 表示展示 5 秒）。
+4.1 视频/图片素材（video_bg 背景与画面层通用）
+add_video_segment / batch_add_segments 的 material 支持：本地绝对路径或 http(s) URL；图片（png/jpg/webp）与视频（mp4/mov 等）均可，无需将 png 转成 mp4。
+video_bg 全屏背景：按分镜传入用户自定义背景路径或 URL；未指定时可使用 aidata/cankao/background.png。target_start_end 指定该段展示时长（图片由时长决定，视频可按 source_timerange 截取）。
 禁止仅因格式为 png 而自行 ffmpeg 转码；仅当 add_video_segment 明确报错时才考虑其他方案。
 
 4.2 图片布局 clip_settings（分镜必用，禁止居中堆叠）

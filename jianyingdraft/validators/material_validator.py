@@ -10,6 +10,14 @@ from urllib.parse import urlparse
 from typing import Optional, Dict, Any, Tuple
 from dotenv import load_dotenv
 from jianyingdraft.utils.media_parser import get_media_duration
+from jianyingdraft.utils.time_format import (
+    DURATION_TOLERANCE_MS,
+    clamp_timerange_dict_to_max_duration,
+    duration_ms_from_timerange_dict,
+    format_error_duration_exceeded,
+    format_ms_as_seconds_str,
+    parse_time_to_ms,
+)
 
 # 加载环境变量
 load_dotenv()
@@ -59,15 +67,26 @@ class MaterialValidator:
         Raises:
             ValueError: 时间范围超出素材时长
         """
-        # 获取素材时长
         duration = get_media_duration(material_path)
         if duration is None:
-            # 无法获取时长，跳过验证（可能是图片或不支持的格式）
             return
-        duration_seconds = self._parse_time_to_seconds(source_timerange["duration"])
-        # 验证时间范围
-        if duration_seconds > duration:
-            raise ValueError(f"素材所占的轨道时长 {duration_seconds}s 超出素材本身时长 {duration}s，请缩短轨道所占时间")
+
+        max_duration_ms = int(round(duration * 1000))
+        requested_ms = duration_ms_from_timerange_dict(source_timerange)
+
+        if requested_ms <= max_duration_ms:
+            return
+
+        if clamp_timerange_dict_to_max_duration(source_timerange, max_duration_ms):
+            return
+
+        if requested_ms <= max_duration_ms + DURATION_TOLERANCE_MS:
+            source_timerange["duration"] = format_ms_as_seconds_str(max_duration_ms)
+            return
+
+        raise ValueError(
+            format_error_duration_exceeded(requested_ms, max_duration_ms, material_path)
+        )
 
     def download_and_localize_material(self, material_path: str, expected_type: str = None) -> str:
         """
@@ -317,25 +336,6 @@ class MaterialValidator:
     
 
     
-    def _parse_time_to_seconds(self, time_str: str) -> float:
-        """
-        解析时间字符串为秒数
-        
-        Args:
-            time_str: 时间字符串，如 "1.5s"
-            
-        Returns:
-            float: 秒数
-        """
-        if not time_str or not time_str.endswith('s'):
-            raise ValueError(f"无效的时间格式: {time_str}")
-        
-        try:
-            return float(time_str[:-1])
-        except ValueError:
-            raise ValueError(f"无效的时间格式: {time_str}")
-
-
 # 便捷函数
 def validate_material(material_path: str, material_type: str = None,
                      source_timerange: Dict[str, str] = None) -> None:
