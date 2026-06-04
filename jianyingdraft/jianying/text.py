@@ -285,32 +285,9 @@ class TextSegment:
             bool: 添加是否成功
         """
         try:
-            # 确保目录存在
-            os.makedirs(f"{SAVE_PATH}/{self.draft_id}", exist_ok=True)
+            from jianyingdraft.utils.global_cache import GlobalBatchCache
             file_path = f"{SAVE_PATH}/{self.draft_id}/text.json"
-
-            # 读取现有数据
-            existing_data = []
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        existing_data = json.load(f)
-                        # 如果不是列表，转换为列表
-                        if not isinstance(existing_data, list):
-                            existing_data = [existing_data]
-                except (json.JSONDecodeError, FileNotFoundError):
-                    # 如果文件不存在或格式错误，初始化为空列表
-                    existing_data = []
-
-            # 添加新数据
-            existing_data.append(new_data)
-
-            # 保存为规范的JSON数组格式
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(existing_data, f, ensure_ascii=False, indent=2)
-
-            return True
-
+            return GlobalBatchCache.append_json(file_path, new_data)
         except Exception as e:
             print(f"添加JSON数据失败: {e}")
             return False
@@ -323,11 +300,9 @@ class TextSegment:
             List: 文本片段记录列表
         """
         try:
+            from jianyingdraft.utils.global_cache import GlobalBatchCache
             file_path = f"{SAVE_PATH}/{self.draft_id}/text.json"
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            return []
+            return GlobalBatchCache.get_json(file_path)
         except Exception as e:
             print(f"读取文本片段数据失败: {e}")
             return []
@@ -350,19 +325,25 @@ class TextSegment:
 
     def _validate_track_for_text(self, track_name: str):
         """验证轨道是否适用于文本片段"""
-        track_manager = Track(self.draft_id)
+        from jianyingdraft.utils.global_cache import GlobalBatchCache
 
-        # 检查轨道是否存在
-        if not track_manager.validate_track_exists(track_name):
-            raise NameError(f"轨道不存在: {track_name}")
+        if GlobalBatchCache.is_track_validated(self.draft_id, track_name, "text"):
+            return
 
-        # 检查轨道类型是否为文本类型
-        track_info = track_manager.get_track_by_name(track_name)
+        track_info = GlobalBatchCache.get_track_by_name(self.draft_id, track_name)
+        if not track_info:
+            track_manager = Track(self.draft_id)
+            if not track_manager.validate_track_exists(track_name):
+                raise NameError(f"轨道不存在: {track_name}")
+            track_info = track_manager.get_track_by_name(track_name)
+
         if track_info:
             add_track_data = track_info.get("add_track", {})
             track_type = add_track_data.get("track_type")
             if track_type != "text":
                 raise TypeError(f"轨道 '{track_name}' 的类型是 '{track_type}'，不能添加文本片段")
+
+        GlobalBatchCache.mark_track_validated(self.draft_id, track_name, "text")
 
 
 

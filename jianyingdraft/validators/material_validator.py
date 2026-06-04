@@ -86,6 +86,11 @@ class MaterialValidator:
         if not self.draft_id:
             raise ValueError("素材本地化需要指定草稿ID")
 
+        from jianyingdraft.utils.global_cache import GlobalBatchCache
+        cached_path = GlobalBatchCache.get_copied_material(self.draft_id, material_path)
+        if cached_path:
+            return self._get_relative_path(cached_path)
+
         if self._is_url(material_path):
             # 网络素材：下载到本地
             local_path = self._download_url_to_local(material_path, expected_type)
@@ -93,9 +98,12 @@ class MaterialValidator:
             # 本地素材：复制到material文件夹
             local_path = self._copy_local_to_material(material_path, expected_type)
 
-        # 验证文件
-        self.validate_material_path(local_path, expected_type)
+        from jianyingdraft.utils.global_cache import GlobalBatchCache as _GBC
 
+        if not _GBC.is_active():
+            self.validate_material_path(local_path, expected_type)
+
+        GlobalBatchCache.set_copied_material(self.draft_id, material_path, local_path)
         # 返回相对路径
         return self._get_relative_path(local_path)
 
@@ -149,25 +157,33 @@ class MaterialValidator:
             str: material文件夹中的文件绝对路径
         """
         try:
-            # 验证源文件存在
+            local_path = os.path.abspath(local_path)
             if not os.path.exists(local_path):
                 raise FileNotFoundError(f"源文件不存在: {local_path}")
 
-            # 创建素材文件夹
-            material_dir = self._get_material_dir()
+            material_dir = os.path.abspath(self._get_material_dir())
             os.makedirs(material_dir, exist_ok=True)
 
-            # 获取文件名
-            filename = os.path.basename(local_path)
+            # 源文件已在 material 目录内，无需复制
+            if local_path == material_dir or local_path.startswith(material_dir + os.sep):
+                return local_path
 
-            # 处理重名文件
+            filename = os.path.basename(local_path)
+            base_path = os.path.join(material_dir, filename)
+            if os.path.exists(base_path) and os.path.getsize(local_path) == os.path.getsize(base_path):
+                return base_path
+
             target_path = self._get_unique_filename(material_dir, filename)
 
-            # 复制文件
-            print(f"正在复制素材: {local_path} -> {target_path}")
-            shutil.copy2(local_path, target_path)
+            # 同盘优先硬链接，避免批量时重复拷贝大文件
+            try:
+                if os.stat(local_path).st_dev == os.stat(material_dir).st_dev:
+                    os.link(local_path, target_path)
+                    return target_path
+            except OSError:
+                pass
 
-            print(f"素材复制完成: {target_path}")
+            shutil.copy2(local_path, target_path)
             return target_path
 
         except Exception as e:
@@ -360,18 +376,18 @@ def download_and_validate_material(draft_id: str, material_path: str, material_t
     # 下载并本地化素材
     local_path = validator.download_and_localize_material(material_path, material_type)
 
-    # 验证时长（如果提供了源时间范围；图片素材跳过）
+    # 验证时长：用原始路径查缓存（复制前后时长相同，避免对 material 副本再跑 MediaInfo）
     if target_timerange and material_type in ("audio", "video", "visual"):
-        if not os.path.isabs(local_path):
-            abs_path = os.path.join(SAVE_PATH, draft_id, local_path)
-        else:
-            abs_path = local_path
-        ext = os.path.splitext(abs_path)[1].lower()
+        ext = os.path.splitext(material_path)[1].lower()
         should_check_duration = material_type in ("audio", "video") or (
             material_type == "visual" and ext in MaterialValidator.SUPPORTED_VIDEO_FORMATS
         )
         if should_check_duration:
-            validator.validate_source_timerange(abs_path, target_timerange)
+            validator.validate_source_timerange(material_path, target_timerange)
+            from jianyingdraft.utils import global_cache as gc
+            duration = gc.GlobalBatchCache.get_media_duration(material_path)
+            abs_local = local_path if os.path.isabs(local_path) else os.path.join(SAVE_PATH, draft_id, local_path)
+            gc.GlobalBatchCache.set_media_duration(abs_local, duration)
 
     return local_path
 

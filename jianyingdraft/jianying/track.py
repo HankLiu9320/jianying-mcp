@@ -128,11 +128,9 @@ class Track:
             List: 轨道记录列表
         """
         try:
+            from jianyingdraft.utils.global_cache import GlobalBatchCache
             file_path = f"{SAVE_PATH}/{self.draft_id}/track.json"
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            return []
+            return GlobalBatchCache.get_json(file_path)
         except Exception as e:
             print(f"读取轨道数据失败: {e}")
             return []

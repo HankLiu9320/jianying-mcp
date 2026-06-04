@@ -11,24 +11,38 @@ from jianyingdraft.utils.response import ToolResponse
 from jianyingdraft.utils.time_format import parse_start_end_format
 
 
-def _resolve_track_name(draft_id: str, track_id: Optional[str], track_name: Optional[str]) -> tuple[Optional[str], Optional[str], Optional[str]]:
+def _resolve_track_name(
+    draft_id: str,
+    track_id: Optional[str],
+    track_name: Optional[str],
+    track_cache: Optional[Dict[tuple, tuple]] = None,
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """返回 (track_id, track_name, error_message)。"""
+    cache_key = (draft_id, track_id, track_name)
+    if track_cache is not None and cache_key in track_cache:
+        return track_cache[cache_key]
+
     if track_id:
         resolved_name = index_manager.get_track_name_by_track_id(track_id)
         resolved_draft = index_manager.get_draft_id_by_track_id(track_id)
         if not resolved_draft:
-            return None, None, f"未找到轨道: {track_id}"
-        if resolved_draft != draft_id:
-            return None, None, f"轨道 {track_id} 不属于草稿 {draft_id}"
-        return track_id, resolved_name, None
-
-    if track_name:
+            result = (None, None, f"未找到轨道: {track_id}")
+        elif resolved_draft != draft_id:
+            result = (None, None, f"轨道 {track_id} 不属于草稿 {draft_id}")
+        else:
+            result = (track_id, resolved_name, None)
+    elif track_name:
         resolved_id = index_manager.get_track_id_by_draft_and_name(draft_id, track_name)
         if not resolved_id:
-            return None, None, f"草稿 {draft_id} 中未找到轨道: {track_name}"
-        return resolved_id, track_name, None
+            result = (None, None, f"草稿 {draft_id} 中未找到轨道: {track_name}")
+        else:
+            result = (resolved_id, track_name, None)
+    else:
+        result = (None, None, "必须提供 track_id 或 track_name")
 
-    return None, None, "必须提供 track_id 或 track_name"
+    if track_cache is not None:
+        track_cache[cache_key] = result
+    return result
 
 
 def _get_animation_fields(item: Dict[str, Any]) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -164,12 +178,18 @@ def batch_create_tracks_service(
     )
 
 
-def _add_single_segment(draft_id: str, item: Dict[str, Any], index: int) -> Dict[str, Any]:
+def _add_single_segment(
+    draft_id: str,
+    item: Dict[str, Any],
+    index: int,
+    track_cache: Optional[Dict[tuple, tuple]] = None,
+) -> Dict[str, Any]:
     segment_type = item.get("type")
     track_id, track_name, track_error = _resolve_track_name(
         draft_id,
         item.get("track_id"),
         item.get("track_name"),
+        track_cache=track_cache,
     )
     if track_error:
         return {"index": index, "type": segment_type, "success": False, "message": track_error}
@@ -316,30 +336,48 @@ def batch_add_segments_service(
     if not segments:
         return ToolResponse(success=False, message="segments 不能为空")
 
-    results: List[Dict[str, Any]] = []
-    succeeded = 0
-    failed = 0
+    from jianyingdraft.utils.global_cache import GlobalBatchCache
 
-    for index, item in enumerate(segments):
-        result_item = _add_single_segment(draft_id, item, index)
-        results.append(result_item)
-        if result_item.get("success"):
-            succeeded += 1
-        else:
-            failed += 1
-            if stop_on_error:
-                break
+    GlobalBatchCache.start_batch()
+    try:
+        # 批量预加载：避免循环内重复 MediaInfo / track.json / 素材校验
+        unique_materials = {
+            item.get("material")
+            for item in segments
+            if item.get("material") and item.get("type") in ("video", "audio")
+        }
+        GlobalBatchCache.prewarm_media_durations(list(unique_materials))
+        GlobalBatchCache.prewarm_track_cache(draft_id)
 
-    overall_success = failed == 0
-    return ToolResponse(
-        success=overall_success,
-        message=f"批量添加片段完成: 成功 {succeeded}，失败 {failed}",
-        data={
-            "draft_id": draft_id,
-            "total": len(segments),
-            "processed": len(results),
-            "succeeded": succeeded,
-            "failed": failed,
-            "results": results,
-        },
-    )
+        # 同轨道名只解析一次
+        track_cache: Dict[tuple, tuple] = {}
+
+        results: List[Dict[str, Any]] = []
+        succeeded = 0
+        failed = 0
+
+        for index, item in enumerate(segments):
+            result_item = _add_single_segment(draft_id, item, index, track_cache=track_cache)
+            results.append(result_item)
+            if result_item.get("success"):
+                succeeded += 1
+            else:
+                failed += 1
+                if stop_on_error:
+                    break
+
+        overall_success = failed == 0
+        return ToolResponse(
+            success=overall_success,
+            message=f"批量添加片段完成: 成功 {succeeded}，失败 {failed}",
+            data={
+                "draft_id": draft_id,
+                "total": len(segments),
+                "processed": len(results),
+                "succeeded": succeeded,
+                "failed": failed,
+                "results": results,
+            },
+        )
+    finally:
+        GlobalBatchCache.end_batch()

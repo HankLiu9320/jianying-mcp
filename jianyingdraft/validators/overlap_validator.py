@@ -128,12 +128,9 @@ class OverlapValidator:
             List[Dict]: 片段列表
         """
         try:
+            from jianyingdraft.utils.global_cache import GlobalBatchCache
             file_path = f"{SAVE_PATH}/{self.draft_id}/{segment_type}.json"
-            if not os.path.exists(file_path):
-                return []
-
-            with open(file_path, 'r', encoding='utf-8') as f:
-                all_segments = json.load(f)
+            all_segments = GlobalBatchCache.get_json(file_path)
 
             # 筛选同轨道的片段
             track_segments = []
