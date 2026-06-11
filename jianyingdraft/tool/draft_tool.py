@@ -56,17 +56,20 @@ segment_id：添加素材后获得，用于添加特效和动画
 4.1 视频/图片素材（video_bg 背景与画面层通用）
 add_video_segment / batch_add_segments 的 material 支持：本地绝对路径或 http(s) URL；图片（png/jpg/webp）与视频（mp4/mov 等）均可，无需将 png 转成 mp4。
 video_bg 全屏背景：按分镜传入用户自定义背景路径或 URL；未指定时可使用 aidata/cankao/background.png。target_start_end 指定该段展示时长（图片由时长决定，视频可按 source_timerange 截取）。
+画面层 PNG（img_prop_* / img_* 道具符号）：必须为 RGBA 真实透明背景（alpha 有效），禁止白底/灰底/场景底伪透明；上屏前若见底色块须先抠图或重生成。
 禁止仅因格式为 png 而自行 ffmpeg 转码；仅当 add_video_segment 明确报错时才考虑其他方案。
 
-4.2 图片布局 clip_settings（分镜必用，禁止居中堆叠）
-- 每张 PNG（除全屏背景外）必须传入 clip_settings（scale_x/y + transform_x/y）；禁止全部默认 0,0 堆在画面中央。
+4.2 图片布局 clip_settings（分镜必用；数值以 aidata 分镜 02 或 知识点分镜.md 为准）
+- 每张 PNG（除全屏背景外）必须传入 clip_settings（scale_x/y + transform_x/y）。
 - 坐标：transform 单位为半个画布宽/高；负 x 左、正 x 右；正 y 上、负 y 下。
-- 默认模板 A（左讲解+右展示，80%镜头）：角色 layer1 x:-0.55 y:-0.45 scale:0.45；主道具 layer2 x:0.50 y:-0.32 scale:0.40；标签 overlay x:0.62 y:-0.12 scale:0.26（贴主道具右上外侧，禁止压顶）。
-- 有讲解角色时：主视觉必须在角色对侧（x 符号相反，差值≥0.9）；中缝 |x|≤0.15 不放主元素。
-- 一镜一重点：每镜 PNG≤4（1主+0~2辅+0~1标签）；禁止把前后句无关道具堆同屏。
-- 主体与字幕分离：PNG 最下缘 y≥-0.55；字幕 transform_y=-0.85。
-- 分镜表数值须原样写入 clip_settings；无分镜时可参考模板 A/B/C/D/E（见知识点分镜.md「通用布局方案」）。
-- batch_add_segments 示例：{"type":"video","track_name":"video_layer1","material":"/path/role.png","target_start_end":"0s-5s","clip_settings":{"scale_x":0.45,"scale_y":0.45,"transform_x":-0.55,"transform_y":-0.45},"animation_type":"IntroType","animation_name":"渐显"}
+- 全片默认不上讲解角色；画面以素材为主视觉，旁白靠 TTS+字幕。
+- 尺寸阶梯：L1 主视觉 scale 0.62–0.72；L2 辅视觉 0.42–0.55；L3 标签 0.26–0.34；同镜 L1 scale 必须 > L2。
+- 默认模板 A（单主视觉居中，约70%镜头）：L1 主视觉 layer1 {"scale_x":0.68,"scale_y":0.68,"transform_x":0.0,"transform_y":-0.22}；标签 overlay {"scale_x":0.30,"scale_y":0.30,"transform_x":0.36,"transform_y":0.02}（贴主视觉右上外侧，禁止压顶）。
+- 模板 B 主+辅：L1 {"scale_x":0.65,"transform_x":-0.08} + L2 {"scale_x":0.46,"transform_x":0.32}；模板 C 双物对比左右各 {"scale_x":0.55,"transform_x":±0.24}。
+- 一镜一重点：每镜 PNG≤4（1主+0~2辅+0~1标签）；禁止把前后句无关道具堆同屏；禁止 L1 scale < 0.58。
+- 主体与字幕分离：PNG 主体最下缘 transform_y ≥ -0.40；字幕 transform_y=-0.85。
+- 分镜表 clip_settings 须原样写入 batch_add_segments，禁止制作阶段擅自改坐标；无分镜时可参考模板 A/B/C/D（见知识点分镜.md「通用布局方案」）。
+- batch_add_segments 示例：{"type":"video","track_name":"video_layer1","material":"/path/prop.png","target_start_end":"0s-5s","clip_settings":{"scale_x":0.68,"scale_y":0.68,"transform_x":0.0,"transform_y":-0.22},"animation_type":"IntroType","animation_name":"放大"}
 - 分镜动效列须映射为 animation_type、animation_name；全屏背景及标注「—」的元素不加动效
 
 5.时长规则
