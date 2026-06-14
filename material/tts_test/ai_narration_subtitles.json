@@ -1,0 +1,624 @@
+{
+  "utterances": [
+    {
+      "text": "人工智能",
+      "translation_text": "",
+      "start_time": 210,
+      "end_time": 970,
+      "words": [
+        {
+          "text": "人工",
+          "start_time": 210,
+          "end_time": 530,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "智能",
+          "start_time": 530,
+          "end_time": 970,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "正在深刻改变我们的生活方式",
+      "translation_text": "",
+      "start_time": 970,
+      "end_time": 3090,
+      "words": [
+        {
+          "text": "正在",
+          "start_time": 970,
+          "end_time": 1290,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "深刻",
+          "start_time": 1290,
+          "end_time": 1650,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "改变",
+          "start_time": 1650,
+          "end_time": 1890,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "我们",
+          "start_time": 1890,
+          "end_time": 2090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "的",
+          "start_time": 2090,
+          "end_time": 2170,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "生活",
+          "start_time": 2170,
+          "end_time": 2490,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "方式",
+          "start_time": 2490,
+          "end_time": 3090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "从智能家居到自动驾驶汽车",
+      "translation_text": "",
+      "start_time": 3250,
+      "end_time": 5650,
+      "words": [
+        {
+          "text": "从",
+          "start_time": 3250,
+          "end_time": 3490,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "智能",
+          "start_time": 3490,
+          "end_time": 3810,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "家居",
+          "start_time": 3810,
+          "end_time": 4170,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "到",
+          "start_time": 4170,
+          "end_time": 4330,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "自动",
+          "start_time": 4330,
+          "end_time": 4650,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "驾驶",
+          "start_time": 4650,
+          "end_time": 4930,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "汽车",
+          "start_time": 4930,
+          "end_time": 5650,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "从语音助手到精准医疗诊断",
+      "translation_text": "",
+      "start_time": 5730,
+      "end_time": 8090,
+      "words": [
+        {
+          "text": "从",
+          "start_time": 5730,
+          "end_time": 5970,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "语音",
+          "start_time": 5970,
+          "end_time": 6250,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "助手",
+          "start_time": 6250,
+          "end_time": 6690,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "到",
+          "start_time": 6730,
+          "end_time": 6890,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "精准",
+          "start_time": 6890,
+          "end_time": 7210,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "医疗",
+          "start_time": 7210,
+          "end_time": 7450,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "诊断",
+          "start_time": 7450,
+          "end_time": 8090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "科技让日常事务更便捷更高效",
+      "translation_text": "",
+      "start_time": 8250,
+      "end_time": 11130,
+      "words": [
+        {
+          "text": "科技",
+          "start_time": 8250,
+          "end_time": 8610,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "让",
+          "start_time": 8610,
+          "end_time": 8730,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "日常",
+          "start_time": 8730,
+          "end_time": 9010,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "事务",
+          "start_time": 9010,
+          "end_time": 9410,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "更",
+          "start_time": 9410,
+          "end_time": 9610,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "便捷",
+          "start_time": 9610,
+          "end_time": 10130,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "更",
+          "start_time": 10290,
+          "end_time": 10490,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "高效",
+          "start_time": 10490,
+          "end_time": 11130,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "我们既要积极拥抱创新成果",
+      "translation_text": "",
+      "start_time": 11250,
+      "end_time": 13450,
+      "words": [
+        {
+          "text": "我们",
+          "start_time": 11250,
+          "end_time": 11530,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "既",
+          "start_time": 11530,
+          "end_time": 11650,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "要",
+          "start_time": 11650,
+          "end_time": 11810,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "积极",
+          "start_time": 11810,
+          "end_time": 12090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "拥抱",
+          "start_time": 12090,
+          "end_time": 12410,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "创新",
+          "start_time": 12410,
+          "end_time": 12770,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "成果",
+          "start_time": 12770,
+          "end_time": 13450,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "也要理性关注数据安全与伦理边界",
+      "translation_text": "",
+      "start_time": 13530,
+      "end_time": 16090,
+      "words": [
+        {
+          "text": "也要",
+          "start_time": 13530,
+          "end_time": 13770,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "理性",
+          "start_time": 13770,
+          "end_time": 14050,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "关注",
+          "start_time": 14050,
+          "end_time": 14410,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "数据",
+          "start_time": 14410,
+          "end_time": 14730,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "安全",
+          "start_time": 14730,
+          "end_time": 15090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "与",
+          "start_time": 15090,
+          "end_time": 15210,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "伦理",
+          "start_time": 15210,
+          "end_time": 15450,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "边界",
+          "start_time": 15450,
+          "end_time": 16090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "让技术真正造福每一个人",
+      "translation_text": "",
+      "start_time": 16210,
+      "end_time": 18250,
+      "words": [
+        {
+          "text": "让",
+          "start_time": 16210,
+          "end_time": 16410,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "技术",
+          "start_time": 16410,
+          "end_time": 16730,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "真正",
+          "start_time": 16730,
+          "end_time": 17090,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "造福",
+          "start_time": 17090,
+          "end_time": 17410,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "每",
+          "start_time": 17410,
+          "end_time": 17570,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "一个",
+          "start_time": 17570,
+          "end_time": 17770,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "人",
+          "start_time": 17770,
+          "end_time": 18250,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    },
+    {
+      "text": "共创美好未来",
+      "translation_text": "",
+      "start_time": 18290,
+      "end_time": 19530,
+      "words": [
+        {
+          "text": "共创",
+          "start_time": 18290,
+          "end_time": 18650,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "美好",
+          "start_time": 18650,
+          "end_time": 18930,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        },
+        {
+          "text": "未来",
+          "start_time": 18930,
+          "end_time": 19530,
+          "attribute": {
+            "event": "speech",
+            "speaker": ""
+          }
+        }
+      ],
+      "attribute": {
+        "event": "speech",
+        "speaker": ""
+      }
+    }
+  ],
+  "attribute": {
+    "extra": {
+      "caption_type": "auto_caption_type",
+      "language": "zh-CN"
+    }
+  },
+  "hit_cache": false,
+  "model": ""
+}
