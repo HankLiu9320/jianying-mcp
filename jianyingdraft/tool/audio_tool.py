@@ -7,6 +7,7 @@ from typing import Optional, List
 from mcp.server.fastmcp import FastMCP
 from jianyingdraft.services.audio_service import add_audio_segment_service, add_audio_effect_service, \
     add_audio_fade_service, add_audio_keyframe_service, text_to_speech_service
+from jianyingdraft.services.audio_subtitle_service import recognize_subtitles_service
 from jianyingdraft.utils.response import ToolResponse
 from jianyingdraft.utils.index_manager import index_manager
 from jianyingdraft.utils.time_format import parse_start_end_format
@@ -401,4 +402,50 @@ def audio_tools(mcp: FastMCP):
             output_name=output_name
         )
 
+    @mcp.tool()
+    def recognize_subtitles(
+            audio_path: str,
+            output_srt: Optional[str] = None,
+            output_json: Optional[str] = None,
+            max_lines: int = 1,
+            words_per_line: int = 16,
+            poll_timeout: float = 120.0,
+            audio_uri: Optional[str] = None,
+    ) -> ToolResponse:
+        """
+        剪映语音字幕识别（PC ASR）。
+
+        将本地音频上传到剪映 VOD，调用 audio_subtitle 接口识别，返回带毫秒时间轴的字幕。
+        无需 Cookie，使用设备签名（默认设备信息见项目 .env.example）。
+
+        典型用法：TTS 生成音频后调用本工具获取句级字幕，再 add_text_segment 写入草稿。
+
+        Args:
+            audio_path: 本地音频文件绝对路径（mp3/wav/m4a 等）
+            output_srt: 导出 SRT 路径（可选，不传则仅返回 data.srt）
+            output_json: 导出完整识别 JSON 路径（可选）
+            max_lines: 每屏最大行数，默认 1
+            words_per_line: 每行最大字数，默认 16
+            poll_timeout: 轮询超时秒数，默认 120
+            audio_uri: 已有 TOS URI 时跳过上传，仅测 submit/query（可选）
+        """
+        from pathlib import Path
+
+        audio_path = audio_path.strip()
+        if not output_srt:
+            stem = Path(audio_path).expanduser().stem
+            output_srt = f"/tmp/{stem}.srt"
+        if not output_json:
+            stem = Path(audio_path).expanduser().stem
+            output_json = f"/tmp/{stem}_subtitles.json"
+
+        return recognize_subtitles_service(
+            audio_path=audio_path,
+            audio_uri=audio_uri,
+            output_srt=output_srt,
+            output_json=output_json,
+            max_lines=max_lines,
+            words_per_line=words_per_line,
+            poll_timeout=poll_timeout,
+        )
 

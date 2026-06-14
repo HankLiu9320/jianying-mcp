@@ -42,6 +42,7 @@ jianying mcp是一个强大的视频制作自动化工具，通过mcp协议让AI
 - `add_audio_fade` - 淡入淡出效果
 - `add_audio_keyframe` - 音频关键帧
 - `text_to_speech` - 文本转语音（WebSocket 调用字节 TTS），输出本地 mp3
+- `recognize_subtitles` - 剪映语音字幕识别（上传音频 → ASR → 返回句级时间轴与 SRT）
 
 ### 📝 文本处理
 - `add_text_segment` - 添加文本片段
