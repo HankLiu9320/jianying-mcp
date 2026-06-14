@@ -135,3 +135,70 @@ def utility_tools(mcp: FastMCP):
                 success=False,
                 message=f"解析媒体文件失败: {str(e)}"
             )
+
+    @mcp.tool()
+    def trim_png_alpha(
+            input_path: str,
+            output_path: Optional[str] = None,
+            target_width: Optional[int] = None,
+            target_height: Optional[int] = None,
+            alpha_threshold: int = 128,
+            max_margin_ratio: float = 0.02,
+            validate_only: bool = False,
+    ) -> ToolResponse:
+        """
+        PNG alpha 满画幅紧裁切：裁至内容包围盒，**保持原有宽高比**等比缩放（禁止拉伸），输出紧贴内容尺寸。
+
+        Args:
+            input_path: 输入 PNG 绝对路径（须 RGBA 或可调为 RGBA）
+            output_path: 输出路径；省略则覆盖 input_path
+            target_width: 目标宽度上限/固定宽（与 target_height 组合时为 contain 框宽）；省略且 target_height 也省略则仅裁切
+            target_height: 目标高度上限/固定高；省略且 target_width 也省略则仅裁切
+            alpha_threshold: alpha 判定阈值（0-255），默认 128
+            max_margin_ratio: 边距上限（相对画布比例），默认 0.02（2%）
+            validate_only: True 时仅分析边距，不写文件
+
+        Returns:
+            aspect_ratio_preserved、output_size（可能为 512×384 等非方形）、margins_after、margin_ok 等
+        """
+        try:
+            from jianyingdraft.utils.png_alpha import trim_png_alpha as trim_func
+
+            result = trim_func(
+                input_path=input_path,
+                output_path=output_path,
+                target_width=target_width,
+                target_height=target_height,
+                alpha_threshold=alpha_threshold,
+                max_margin_ratio=max_margin_ratio,
+                validate_only=validate_only,
+            )
+            data = result.to_dict()
+
+            if validate_only:
+                msg = (
+                    f"校验完成：max_margin={result.margins_after['max_margin']:.4f}，"
+                    f"margin_ok={result.margin_ok}，alpha_corners_ok={result.alpha_corners_ok}"
+                )
+            elif result.margin_ok and result.alpha_corners_ok:
+                msg = f"紧裁切完成并已保存: {result.output_path}"
+            else:
+                parts = [f"已保存: {result.output_path}"]
+                if not result.margin_ok:
+                    parts.append(
+                        f"边距未达标(max={result.margins_after['max_margin']:.4f} > {max_margin_ratio})"
+                    )
+                if not result.alpha_corners_ok:
+                    parts.append("四角 alpha 校验未通过")
+                msg = "；".join(parts)
+
+            return ToolResponse(
+                success=result.margin_ok and result.alpha_corners_ok and result.aspect_ratio_preserved,
+                message=msg,
+                data=data,
+            )
+        except Exception as e:
+            return ToolResponse(
+                success=False,
+                message=f"trim_png_alpha 失败: {str(e)}",
+            )

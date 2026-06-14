@@ -53,6 +53,7 @@ jianying mcp是一个强大的视频制作自动化工具，通过mcp协议让AI
 ### 🔧 实用工具
 - `parse_media_info` - 解析媒体文件信息
 - `find_effects_by_type` - 查找可用特效资源
+- `trim_png_alpha` - PNG alpha 紧裁切并缩回目标尺寸（满画幅，便于 layout scale 对齐）
 
 ### ⚡ 批量工具（分镜/多镜头推荐）
 - `batch_create_tracks` - 一次创建多条轨道，返回 `track_map`

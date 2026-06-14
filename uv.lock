@@ -202,6 +202,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "imageio" },
     { name = "mcp", extra = ["cli"] },
+    { name = "pillow" },
     { name = "pymediainfo" },
     { name = "python-dotenv" },
     { name = "requests" },
@@ -214,6 +215,7 @@ dependencies = [
 requires-dist = [
     { name = "imageio", specifier = ">=2.37.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.12.4" },
+    { name = "pillow", specifier = ">=11.0.0" },
     { name = "pymediainfo", specifier = ">=7.0.1" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "requests", specifier = ">=2.32.4" },

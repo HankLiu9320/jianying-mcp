@@ -57,6 +57,7 @@ segment_id：添加素材后获得，用于添加特效和动画
 add_video_segment / batch_add_segments 的 material 支持：本地绝对路径或 http(s) URL；图片（png/jpg/webp）与视频（mp4/mov 等）均可，无需将 png 转成 mp4。
 video_bg 全屏背景：按分镜传入用户自定义背景路径或 URL；未指定时可使用 aidata/cankao/background.png。target_start_end 指定该段展示时长（图片由时长决定，视频可按 source_timerange 截取）。
 画面层 PNG（img_prop_* / img_* 道具符号）：必须为 RGBA 真实透明背景（alpha 有效），禁止白底/灰底/场景底伪透明；上屏前若见底色块须先抠图或重生成。
+PNG 须满画幅紧裁切：成图后调用 trim_png_alpha（保持原图宽高比、禁止拉伸）；可传 target_width/target_height 作 contain 上限，输出尺寸随比例（如 512×384）；margin_ok 为 true 后再上屏。
 禁止仅因格式为 png 而自行 ffmpeg 转码；仅当 add_video_segment 明确报错时才考虑其他方案。
 
 4.2 图片布局 clip_settings（分镜必用；数值以 aidata 分镜 02 或 知识点分镜.md 为准）

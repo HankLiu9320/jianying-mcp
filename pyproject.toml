@@ -5,6 +5,7 @@ description = "this is jianying mcp"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "pillow>=11.0.0",
     "imageio>=2.37.0",
     "mcp[cli]>=1.12.4",
     "pymediainfo>=7.0.1",
