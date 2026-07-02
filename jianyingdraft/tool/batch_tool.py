@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
+from jianyingdraft.services.audio_service import DEFAULT_SPEAKER
 from jianyingdraft.services.batch_service import batch_add_segments_service, batch_create_tracks_service
 from jianyingdraft.services.segment_builder_service import build_narration_segments_service
 from jianyingdraft.utils.media_parser import get_media_duration
@@ -103,7 +104,7 @@ def batch_tools(mcp: FastMCP):
         output_dir: str,
         subtitle_items: List[Dict[str, Any]],
         bg_material: str,
-        speaker: str = "BV411_streaming",
+        speaker: str = DEFAULT_SPEAKER,
         video_items: Optional[List[Dict[str, Any]]] = None,
         skip_asr: bool = False,
         force_tts: bool = False,
@@ -130,7 +131,7 @@ def batch_tools(mcp: FastMCP):
                 - tts_text: TTS 文本（可含标点；句号处切分合成）
                 - skip_tts: 可选，true 表示仅显示字幕、TTS 已含于前一条
             bg_material: 全片背景绝对路径或 URL
-            speaker: TTS 发音人，默认 BV411_streaming
+            speaker: TTS 发音人，默认 BV009_streaming
             video_items: 可选，画面素材列表，每项含 track/material/shot_id/clip_settings 等；
                 end=0 表示持续到镜头结束；start_subtitle 绑定镜头内字幕序号对齐入场
             skip_asr: 跳过 ASR，按字数比例分配字幕时间（离线调试用）

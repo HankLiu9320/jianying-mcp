@@ -379,7 +379,7 @@ def audio_tools(mcp: FastMCP):
         Args:
             text: 需要转语音的文本内容
             output_dir: 输出目录（必填），如 /path/to/audio 或 ~/Downloads/tts
-            speaker: 发音人（可选），默认 BV411_streaming
+            speaker: 发音人（可选），默认 BV009_streaming
             voice: speaker 的兼容别名（可选）
             output_name: 输出文件名（可选），默认自动生成，后缀为 .mp3
         """

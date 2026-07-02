@@ -15,7 +15,7 @@ from jianyingdraft.utils.response import ToolResponse
 WS_URL = "wss://sami.bytedance.com/internal/api/v2/ws?device_id=420445199538212&iid=420445199542308"
 APP_KEY = "IZjhUeAYwP"
 NAMESPACE = "TTS"
-DEFAULT_SPEAKER = "BV411_streaming"
+DEFAULT_SPEAKER = "BV009_streaming"
 DEFAULT_FORMAT = "mp3"
 BIT_RATE = 64000
 SAMPLE_RATE = 24000
@@ -66,7 +66,7 @@ def text_to_speech_service(
     Args:
         text: 要合成的文本
         output_dir: 输出目录（由调用方指定，支持 ~ 与相对路径）
-        speaker: 发音人（可选），默认 BV411_streaming
+        speaker: 发音人（可选），默认 BV009_streaming
         output_name: 输出文件名（可选）
 
     Returns:

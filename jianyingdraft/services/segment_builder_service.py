@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from jianyingdraft.services.audio_service import text_to_speech_service
+from jianyingdraft.services.audio_service import DEFAULT_SPEAKER, text_to_speech_service
 from jianyingdraft.services.audio_subtitle_service import recognize_subtitles_service
 from jianyingdraft.utils.media_parser import get_media_duration
 
@@ -688,7 +688,7 @@ def build_narration_segments_service(
     output_dir: str,
     subtitle_items: Sequence[Dict[str, Any]],
     *,
-    speaker: str = "BV411_streaming",
+    speaker: str = DEFAULT_SPEAKER,
     bg_material: str = "",
     video_items: Optional[Sequence[Dict[str, Any]]] = None,
     skip_asr: bool = False,
