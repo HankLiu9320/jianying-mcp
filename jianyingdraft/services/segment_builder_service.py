@@ -13,7 +13,13 @@ from jianyingdraft.services.audio_subtitle_service import recognize_subtitles_se
 from jianyingdraft.utils.media_parser import get_media_duration
 
 SENTENCE_END = re.compile(r"[。！？；]$")
+CLAUSE_SPLIT = re.compile(r"[，、：；]+")
 PUNCT_RE = re.compile("[，。！？；、：\"\"''（）()《》【】\\[\\]…—·]")
+_BREAK_AFTER = (
+    "所以", "因为", "如果", "已经", "正在", "这种", "那些", "一个",
+    "可以", "还是", "但是", "而且", "或者", "以及", "之后", "之前",
+    "的", "了", "吗", "呢", "吧", "和", "与", "或", "就", "都", "也", "还", "而", "但",
+)
 
 
 @dataclass
@@ -68,6 +74,69 @@ def clean_subtitle_display(text: str, max_chars: int = 12) -> str:
     if len(s) > max_chars:
         return s[:max_chars]
     return s
+
+
+def _hard_split_display(text: str, max_chars: int = 12) -> List[str]:
+    """超长显示文本按词组边界或硬切拆成 ≤max_chars 多条。"""
+    cleaned = clean_subtitle_display(text, max_chars=999)
+    if not cleaned:
+        return []
+    if len(cleaned) <= max_chars:
+        return [cleaned]
+
+    parts: List[str] = []
+    rest = cleaned
+    while len(rest) > max_chars:
+        cut = max_chars
+        best = -1
+        for token in _BREAK_AFTER:
+            pos = rest.rfind(token, 0, max_chars + 1)
+            if pos > 0:
+                end = pos + len(token)
+                if end > best:
+                    best = end
+        if best > 0:
+            cut = best
+        chunk = rest[:cut]
+        if len(chunk) < 2 and parts:
+            break
+        parts.append(chunk)
+        rest = rest[cut:]
+    if rest:
+        if parts and len(rest) < 2:
+            parts[-1] = (parts[-1] + rest)[:max_chars]
+        else:
+            parts.append(rest)
+    return parts
+
+
+def split_tts_to_display_lines(tts_text: str, max_chars: int = 12) -> List[str]:
+    """按 TTS 子句标点拆成多条显示字幕（去标点，每条 ≤max_chars）。"""
+    body = SENTENCE_END.sub("", (tts_text or "").strip())
+    if not body:
+        return []
+    clauses = [c.strip() for c in CLAUSE_SPLIT.split(body) if c.strip()]
+    if not clauses:
+        clauses = [body]
+    lines: List[str] = []
+    for clause in clauses:
+        lines.extend(_hard_split_display(clause, max_chars))
+    return lines
+
+
+def resolve_display_lines_for_group(
+    group: SentenceGroup,
+    utterances: Optional[Sequence[Dict[str, Any]]] = None,
+) -> List[SubtitleLine]:
+    """
+    长句 TTS 按子句标点拆成显示字幕；子句文本来自规划长句，不依赖缩写 planning。
+    """
+    del utterances  # 子句来源仅来自长句 TTS
+    tts_lines = split_tts_to_display_lines(group.tts_text)
+    if tts_lines:
+        return [SubtitleLine(display=text) for text in tts_lines]
+    planned = [clean_subtitle_display(line.display) for line in group.lines if line.display.strip()]
+    return [SubtitleLine(display=text) for text in planned]
 
 
 def ends_sentence(text: str) -> bool:
@@ -232,35 +301,136 @@ def _match_display_chars(
     return next_idx, start, end
 
 
-def _align_subtitles_by_words(
-    lines: Sequence[SubtitleLine],
-    utterances: Sequence[Dict[str, Any]],
-    offset: float,
-) -> Optional[List[Tuple[float, float]]]:
-    """利用 recognize_subtitles 返回的 words 字级时间轴对齐 display。"""
-    asr_chars = _expand_asr_chars(utterances)
-    if not asr_chars:
+def _match_display_start(
+    norm_display: str,
+    asr_chars: Sequence[Tuple[str, float, float]],
+    start_idx: int,
+) -> Optional[Tuple[int, float]]:
+    """在 ASR 字序列中模糊匹配子句，返回 (下一索引, 开始时间)。"""
+    matched = _match_display_chars(norm_display, asr_chars, start_idx)
+    if matched is not None:
+        next_idx, start, _end = matched
+        return next_idx, start
+
+    if not norm_display:
         return None
 
-    timings: List[Tuple[float, float]] = []
-    cursor = 0
-    for line in lines:
-        norm_display = _normalize_for_match(line.display)
-        if not norm_display:
-            return None
-        matched = _match_display_chars(norm_display, asr_chars, cursor)
-        if matched is None:
-            return None
-        cursor, start, end = matched
-        timings.append((offset + start, offset + end))
+    for prefix_len in range(min(len(norm_display), 4), 0, -1):
+        prefix = norm_display[:prefix_len]
+        matched = _match_display_chars(prefix, asr_chars, start_idx)
+        if matched is not None:
+            next_idx, start, _end = matched
+            return next_idx, start
+    return None
 
-    for idx in range(1, len(timings)):
-        prev_end = timings[idx - 1][1]
-        start, end = timings[idx]
-        if start < prev_end:
-            timings[idx] = (prev_end, max(end, prev_end + 0.04))
 
-    return timings
+def _estimate_clause_starts_proportional(
+    n_clauses: int,
+    duration: float,
+    offset: float,
+    weights: Sequence[int],
+) -> List[float]:
+    """ASR 无法匹配时，按字数比例预估各子句开始时间。"""
+    if n_clauses <= 0:
+        return []
+    total = sum(weights) or n_clauses
+    starts: List[float] = []
+    cursor = offset
+    for weight in weights:
+        starts.append(cursor)
+        cursor += duration * weight / total
+    return starts
+
+
+def align_clauses_by_start_time(
+    lines: Sequence[SubtitleLine],
+    utterances: Sequence[Dict[str, Any]],
+    audio_duration: float,
+    offset: float = 0.0,
+) -> List[Tuple[float, float]]:
+    """
+    长句 TTS + 子句字幕对齐（核心逻辑）：
+
+    1. 长句已合成 TTS（调用方负责）
+    2. lines 为长句拆出的子句 display
+    3. ASR 识别各子句开始时间（允许与 ASR 文本不完全一致，前缀/子序列模糊匹配）
+    4. 每条子句必须有开始时间；结束时间 = 下一条开始时间（最后一条到句末）
+    """
+    n = len(lines)
+    if n == 0:
+        return []
+    if n == 1:
+        return [(offset, offset + audio_duration)]
+
+    audio_end = offset + audio_duration
+    weights = [_char_weight(line.display) for line in lines]
+    asr_chars = _expand_asr_chars(utterances) if utterances else []
+
+    starts: List[Optional[float]] = [None] * n
+    cursor_idx = 0
+
+    if asr_chars:
+        for i, line in enumerate(lines):
+            norm = _normalize_for_match(line.display)
+            if not norm:
+                continue
+            found = _match_display_start(norm, asr_chars, cursor_idx)
+            if found is not None:
+                cursor_idx, rel_start = found
+                starts[i] = offset + rel_start
+
+    #  utterance 级粗估：子句数与 ASR 段数接近时，用 utterance 起点
+    if utterances:
+        utt_starts = [
+            int(u.get("start_time", 0)) / 1000.0
+            for u in utterances
+            if (u.get("text") or "").strip()
+        ]
+        if utt_starts:
+            for i in range(n):
+                if starts[i] is not None:
+                    continue
+                if len(utt_starts) == n:
+                    starts[i] = offset + utt_starts[i]
+                else:
+                    ratio = i / max(n - 1, 1)
+                    idx = min(int(round(ratio * (len(utt_starts) - 1))), len(utt_starts) - 1)
+                    starts[i] = offset + utt_starts[idx]
+
+    # 仍缺失则用字数比例预估（保证每条子句都有开始时间）
+    prop = _estimate_clause_starts_proportional(n, audio_duration, offset, weights)
+    for i in range(n):
+        if starts[i] is None:
+            starts[i] = prop[i]
+
+    resolved = [float(s) for s in starts]
+
+    # 单调递增，避免后一条开始早于前一条
+    resolved[0] = max(offset, min(resolved[0], audio_end - 0.04))
+    for i in range(1, n):
+        if resolved[i] <= resolved[i - 1]:
+            resolved[i] = min(resolved[i - 1] + 0.04, audio_end)
+
+    pairs: List[Tuple[float, float]] = []
+    for i in range(n):
+        start = resolved[i]
+        end = resolved[i + 1] if i + 1 < n else audio_end
+        if end <= start:
+            end = min(start + 0.04, audio_end)
+        pairs.append((start, end))
+    return pairs
+
+
+def align_subtitles_with_asr(
+    lines: Sequence[SubtitleLine],
+    utterances: Sequence[Dict[str, Any]],
+    audio_duration: float,
+    offset: float = 0.0,
+) -> List[Tuple[float, float]]:
+    """兼容入口：按「子句开始时间」模型对齐。"""
+    if not utterances:
+        return align_subtitles_proportional(lines, audio_duration, offset)
+    return align_clauses_by_start_time(lines, utterances, audio_duration, offset)
 
 
 def align_subtitles_proportional(
@@ -277,86 +447,6 @@ def align_subtitles_proportional(
         timings.append((cursor, cursor + seg))
         cursor += seg
     return timings
-
-
-def _fill_subtitle_gaps(
-    timings: Sequence[Tuple[float, float]],
-    offset: float,
-    audio_duration: float,
-    min_gap: float = 0.05,
-) -> List[Tuple[float, float]]:
-    """将句内字幕扩展至覆盖整段音频，消除 ASR 字级对齐留下的空白区。"""
-    if not timings:
-        return []
-    audio_start = offset
-    audio_end = offset + audio_duration
-    pairs = [(max(s, audio_start), min(e, audio_end)) for s, e in timings]
-    pairs[0] = (audio_start, pairs[0][1])
-    pairs[-1] = (pairs[-1][0], audio_end)
-    for i in range(len(pairs) - 1):
-        s1, e1 = pairs[i]
-        s2, e2 = pairs[i + 1]
-        if s2 - e1 > min_gap:
-            mid = (e1 + s2) / 2.0
-            pairs[i] = (s1, mid)
-            pairs[i + 1] = (mid, e2)
-    for i in range(1, len(pairs)):
-        prev_end = pairs[i - 1][1]
-        start, end = pairs[i]
-        if start < prev_end:
-            start = prev_end
-            if start >= end:
-                end = min(start + 0.04, audio_end)
-            pairs[i] = (start, end)
-    return pairs
-
-
-def align_subtitles_with_asr(
-    lines: Sequence[SubtitleLine],
-    utterances: Sequence[Dict[str, Any]],
-    audio_duration: float,
-    offset: float = 0.0,
-) -> List[Tuple[float, float]]:
-    pairs: List[Tuple[float, float]]
-
-    if not utterances:
-        pairs = align_subtitles_proportional(lines, audio_duration, offset)
-    else:
-        word_timings = _align_subtitles_by_words(lines, utterances, offset)
-        if word_timings is not None:
-            pairs = word_timings
-        else:
-            asr_times = [
-                (int(u.get("start_time", 0)) / 1000.0, int(u.get("end_time", 0)) / 1000.0)
-                for u in utterances
-                if (u.get("text") or "").strip()
-            ]
-            if not asr_times:
-                pairs = align_subtitles_proportional(lines, audio_duration, offset)
-            else:
-                n_lines = len(lines)
-                n_asr = len(asr_times)
-
-                if n_lines == n_asr:
-                    pairs = [(offset + s, offset + e) for s, e in asr_times]
-                elif n_lines < n_asr:
-                    merged: List[Tuple[float, float]] = []
-                    ratio = n_asr / n_lines
-                    for i in range(n_lines):
-                        start_idx = int(i * ratio)
-                        end_idx = int((i + 1) * ratio) - 1
-                        end_idx = max(start_idx, min(end_idx, n_asr - 1))
-                        merged.append((asr_times[start_idx][0], asr_times[end_idx][1]))
-                    pairs = [(offset + s, offset + e) for s, e in merged]
-                else:
-                    window_start = asr_times[0][0]
-                    window_end = asr_times[-1][1]
-                    window_dur = max(window_end - window_start, 0.01)
-                    pairs = align_subtitles_proportional(lines, window_dur, offset + window_start)
-                    if pairs[-1][1] < offset + audio_duration - 0.05:
-                        pairs[-1] = (pairs[-1][0], offset + audio_duration)
-
-    return _fill_subtitle_gaps(pairs, offset, audio_duration)
 
 
 def generate_sentence_tts(
@@ -436,8 +526,9 @@ def build_timed_subtitles(
     for group in groups:
         duration = durations[group.audio_name]
         utterances = asr_map.get(group.audio_name) or []
-        pairs = align_subtitles_with_asr(group.lines, utterances, duration, global_offset)
-        for idx, (line, (start, end)) in enumerate(zip(group.lines, pairs)):
+        display_lines = resolve_display_lines_for_group(group, utterances)
+        pairs = align_subtitles_with_asr(display_lines, utterances, duration, global_offset)
+        for idx, (line, (start, end)) in enumerate(zip(display_lines, pairs)):
             timed.append(
                 TimedSubtitle(
                     display=clean_subtitle_display(line.display),

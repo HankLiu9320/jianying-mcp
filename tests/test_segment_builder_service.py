@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 import json
+import re
 import unittest
 from pathlib import Path
 
 from jianyingdraft.services.segment_builder_service import (
     SubtitleLine,
+    SentenceGroup,
+    align_clauses_by_start_time,
     align_subtitles_with_asr,
     group_subtitles_by_sentence,
+    resolve_display_lines_for_group,
+    split_tts_to_display_lines,
+    PUNCT_RE,
 )
 
 
@@ -52,6 +58,29 @@ class GroupSubtitlesTest(unittest.TestCase):
       ])
 
 
+class SplitTtsDisplayTest(unittest.TestCase):
+  def test_split_long_sentence_by_clauses(self):
+    lines = split_tts_to_display_lines(
+      "一个人扛不起的大病、养老、失业，大家凑钱一起扛。"
+    )
+    self.assertGreaterEqual(len(lines), 3)
+    self.assertTrue(all(len(re.sub(r"\s+", "", PUNCT_RE.sub("", x))) <= 12 for x in lines))
+
+  def test_resolve_uses_tts_when_planned_too_few(self):
+    group = SentenceGroup(
+      shot_id="S03",
+      index=1,
+      tts_text="一个人扛不起的大病、养老、失业，大家凑钱一起扛。",
+      audio_name="S03_sent01.mp3",
+      lines=[
+        SubtitleLine(display="一个人扛不起"),
+        SubtitleLine(display="大家凑钱一起扛", skip_tts=True),
+      ],
+    )
+    resolved = resolve_display_lines_for_group(group)
+    self.assertGreater(len(resolved), 2)
+
+
 class WordAlignTest(unittest.TestCase):
   def test_word_align_s00_sent00(self):
     cache = Path("/Users/liujianjia/2_tools/jianying/aidata/social-insurance-basics/_asr_cache/S00_sent00.json")
@@ -94,10 +123,44 @@ class WordAlignTest(unittest.TestCase):
     ]
     timings = align_subtitles_with_asr(lines, utterances, audio_duration=5.0, offset=10.0)
     self.assertEqual(len(timings), 2)
-    self.assertAlmostEqual(timings[0][0], 10.0, places=1)
+    self.assertAlmostEqual(timings[0][0], 10.1, places=1)
+    self.assertAlmostEqual(timings[1][0], 13.1, places=1)
+    self.assertAlmostEqual(timings[0][1], timings[1][0], places=1)
     self.assertAlmostEqual(timings[-1][1], 15.0, places=1)
-    self.assertLessEqual(timings[0][1], timings[1][0] + 0.001)
-    self.assertGreater(timings[1][1], timings[1][0])
+
+  def test_clause_starts_every_subclause_has_start(self):
+    utterances = [{
+      "text": "一个人扛不起的大病养老失业大家凑钱一起扛",
+      "start_time": 0,
+      "end_time": 5000,
+      "words": [
+        {"text": "一个", "start_time": 100, "end_time": 400},
+        {"text": "人", "start_time": 400, "end_time": 600},
+        {"text": "扛", "start_time": 600, "end_time": 900},
+        {"text": "不起", "start_time": 900, "end_time": 1200},
+        {"text": "的", "start_time": 1200, "end_time": 1300},
+        {"text": "大病", "start_time": 1300, "end_time": 1900},
+        {"text": "养老", "start_time": 2000, "end_time": 2500},
+        {"text": "失业", "start_time": 2500, "end_time": 3000},
+        {"text": "大家", "start_time": 3100, "end_time": 3500},
+        {"text": "凑钱", "start_time": 3500, "end_time": 3900},
+        {"text": "一起", "start_time": 3900, "end_time": 4300},
+        {"text": "扛", "start_time": 4300, "end_time": 4700},
+      ],
+    }]
+    lines = [
+      SubtitleLine(display="一个人扛不起的大病"),
+      SubtitleLine(display="养老"),
+      SubtitleLine(display="失业"),
+      SubtitleLine(display="大家凑钱一起扛"),
+    ]
+    timings = align_clauses_by_start_time(lines, utterances, audio_duration=5.0, offset=0.0)
+    self.assertEqual(len(timings), 4)
+    for i, (start, end) in enumerate(timings):
+      self.assertLess(start, end)
+      if i + 1 < len(timings):
+        self.assertAlmostEqual(end, timings[i + 1][0], places=2)
+    self.assertAlmostEqual(timings[-1][1], 5.0, places=1)
 
 
 class SocialInsuranceRegressionTest(unittest.TestCase):
